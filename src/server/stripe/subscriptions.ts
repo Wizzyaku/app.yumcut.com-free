@@ -4,6 +4,7 @@ import { config } from '@/server/config';
 import { getStripeClient } from '@/server/stripe/client';
 import { logStripeSubscriptionEvent } from '@/server/stripe/subscription-logger';
 import { notifyAdminsOfSubscriptionCancellation } from '@/server/telegram';
+import { markSubscriptionCancellationForWinback } from '@/server/subscription-winback';
 import {
   getStripePriceIdForProductId,
   getSubscriptionConfig,
@@ -23,6 +24,7 @@ type AppUserProfile = {
   id: string;
   email: string | null;
   name: string | null;
+  preferredLanguage: string | null;
 };
 
 function normalizeId(value: string | null | undefined) {
@@ -116,7 +118,7 @@ function requirePriceIdForPlan(planKey: StripePlanKey) {
 async function findUserById(userId: string): Promise<AppUserProfile | null> {
   return prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, name: true },
+    select: { id: true, email: true, name: true, preferredLanguage: true },
   });
 }
 
@@ -619,6 +621,14 @@ async function notifyStripeCancellation(
     autoRenewStatus: subscription.cancel_at_period_end ? 0 : 1,
   });
 
+  const winbackResult = await markSubscriptionCancellationForWinback({
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    preferredLanguage: user.preferredLanguage,
+    productId,
+  });
+
   logStripeSubscriptionEvent('cancellation_notified', {
     eventId,
     subscriptionId: subscription.id,
@@ -626,6 +636,9 @@ async function notifyStripeCancellation(
     productId,
     reason,
     cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    winbackMarked: winbackResult.marked,
+    winbackEmailSent: winbackResult.emailSent,
+    winbackEmailError: winbackResult.emailError,
   });
 }
 

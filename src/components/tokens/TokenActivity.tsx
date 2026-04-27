@@ -48,6 +48,7 @@ const COPY: Record<AppLanguageCode, TokenActivityCopy> = {
     typeLabels: {
       [TOKEN_TRANSACTION_TYPES.signUpBonus]: 'Sign Up Bonus',
       [TOKEN_TRANSACTION_TYPES.emailReplyBonus]: 'Email Reply Bonus',
+      [TOKEN_TRANSACTION_TYPES.subscriptionWinbackBonus]: 'Subscription Return Bonus',
       [TOKEN_TRANSACTION_TYPES.adminAdjustment]: 'Admin Adjustment',
       [TOKEN_TRANSACTION_TYPES.projectCreation]: 'Project Creation',
       [TOKEN_TRANSACTION_TYPES.scriptRevision]: 'Script Revision',
@@ -83,6 +84,7 @@ const COPY: Record<AppLanguageCode, TokenActivityCopy> = {
     typeLabels: {
       [TOKEN_TRANSACTION_TYPES.signUpBonus]: 'Бонус за регистрацию',
       [TOKEN_TRANSACTION_TYPES.emailReplyBonus]: 'Бонус за ответ на письмо',
+      [TOKEN_TRANSACTION_TYPES.subscriptionWinbackBonus]: 'Бонус за возвращение к подписке',
       [TOKEN_TRANSACTION_TYPES.adminAdjustment]: 'Корректировка баланса',
       [TOKEN_TRANSACTION_TYPES.projectCreation]: 'Создание проекта',
       [TOKEN_TRANSACTION_TYPES.scriptRevision]: 'Доработка сценария',
@@ -146,6 +148,8 @@ function getFallbackDescription(tx: TokenTransactionDTO, language: AppLanguageCo
       return duration != null
         ? (language === 'ru' ? `Создание проекта (${duration}${suffixSec})` : `Project creation (${duration}s)`)
         : (language === 'ru' ? 'Создание проекта' : 'Project creation');
+    case TOKEN_TRANSACTION_TYPES.subscriptionWinbackBonus:
+      return language === 'ru' ? 'Бонус за возвращение к подписке' : 'Subscription return bonus';
     case TOKEN_TRANSACTION_TYPES.scriptRevision:
       return language === 'ru' ? 'Запрос на доработку сценария' : 'Script refinement request';
     case TOKEN_TRANSACTION_TYPES.audioRegeneration:
@@ -176,6 +180,7 @@ function translateKnownInternalDescription(
 
   if (/^new account bonus$/i.test(value)) return 'Бонус за регистрацию';
   if (/^email reply bonus$/i.test(value)) return 'Бонус за ответ на письмо';
+  if (/^subscription return bonus$/i.test(value)) return 'Бонус за возвращение к подписке';
   if (/^project creation \((\d+)s\)$/i.test(value)) {
     return value.replace(/^project creation \((\d+)s\)$/i, 'Создание проекта ($1с)');
   }

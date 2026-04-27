@@ -26,6 +26,12 @@ vi.mock('@/server/telegram', () => ({
   notifyAdminsOfSubscriptionCancellation,
 }));
 
+const markSubscriptionCancellationForWinback = vi.fn();
+
+vi.mock('@/server/subscription-winback', () => ({
+  markSubscriptionCancellationForWinback,
+}));
+
 const decodeSignedTransactionPayload = vi.fn();
 
 vi.mock('@/server/app-store/signed-data-verifier', () => ({
@@ -58,6 +64,12 @@ describe('processAppStoreServerNotification', () => {
     findUser.mockReset();
     processIosSubscriptionPurchase.mockReset();
     notifyAdminsOfSubscriptionCancellation.mockReset();
+    markSubscriptionCancellationForWinback.mockReset();
+    markSubscriptionCancellationForWinback.mockResolvedValue({
+      marked: true,
+      emailSent: true,
+      emailError: null,
+    });
     processIosSubscriptionPurchase.mockResolvedValue({
       alreadyProcessed: false,
       tokensGranted: 150,
@@ -157,6 +169,12 @@ describe('processAppStoreServerNotification', () => {
         userId: 'user-1',
         productId: 'yumcut_weekly_basic',
         reason: 'VOLUNTARY',
+      }),
+    );
+    expect(markSubscriptionCancellationForWinback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        productId: 'yumcut_weekly_basic',
       }),
     );
   });

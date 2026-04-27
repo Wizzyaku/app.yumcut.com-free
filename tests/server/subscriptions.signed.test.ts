@@ -6,6 +6,7 @@ const subscriptionUpdate = vi.fn();
 const userFindUnique = vi.fn();
 const transactionRunner = vi.fn();
 const notifyAdminsOfSubscriptionPurchase = vi.fn();
+const grantSubscriptionWinbackBonusOnResubscribe = vi.fn();
 
 vi.mock('@/server/db', () => ({
   prisma: {
@@ -43,6 +44,10 @@ vi.mock('@/server/telegram', () => ({
   notifyAdminsOfSubscriptionPurchase,
 }));
 
+vi.mock('@/server/subscription-winback', () => ({
+  grantSubscriptionWinbackBonusOnResubscribe,
+}));
+
 const { processIosSubscriptionPurchase, SubscriptionError } = await import('@/server/subscriptions');
 
 beforeEach(() => {
@@ -54,7 +59,13 @@ beforeEach(() => {
   grantTokens.mockReset();
   decodeSignedTransactionPayload.mockReset();
   notifyAdminsOfSubscriptionPurchase.mockReset();
+  grantSubscriptionWinbackBonusOnResubscribe.mockReset();
   notifyAdminsOfSubscriptionPurchase.mockResolvedValue(undefined);
+  grantSubscriptionWinbackBonusOnResubscribe.mockResolvedValue({
+    granted: false,
+    tokensGranted: 0,
+    balance: null,
+  });
 
   subscriptionFindUnique.mockResolvedValue(null);
   subscriptionUpdate.mockResolvedValue(null);
@@ -89,6 +100,14 @@ describe('processIosSubscriptionPurchase (signed transactions)', () => {
     expect(subscriptionCreate).toHaveBeenCalled();
     expect(grantTokens).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-1' }),
+      expect.anything(),
+    );
+    expect(grantSubscriptionWinbackBonusOnResubscribe).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        sourceTransactionId: 'tx-1',
+        productId: 'yumcut_weekly_basic',
+      }),
       expect.anything(),
     );
     expect(notifyAdminsOfSubscriptionPurchase).toHaveBeenCalledWith(

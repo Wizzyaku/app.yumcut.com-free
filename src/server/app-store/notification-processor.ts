@@ -6,6 +6,7 @@ import { logAppleSubscriptionEvent } from './subscription-logger';
 import { decodeSignedTransactionPayload } from './signed-data-verifier';
 import { getSubscriptionConfig } from '@/shared/constants/subscriptions';
 import { notifyAdminsOfSubscriptionCancellation } from '@/server/telegram';
+import { markSubscriptionCancellationForWinback } from '@/server/subscription-winback';
 
 const TOKEN_ELIGIBLE_TYPES = new Set(['DID_RENEW', 'DID_RECOVER', 'INTERACTIVE_RENEWAL']);
 
@@ -63,13 +64,14 @@ export async function processAppStoreServerNotification(record: AppStoreServerNo
         id: string;
         email: string | null;
         name: string | null;
+        preferredLanguage: string | null;
       }
     | null = null;
 
   if (appAccountToken) {
     const user = await prisma.user.findUnique({
       where: { id: appAccountToken },
-      select: { id: true, email: true, name: true },
+      select: { id: true, email: true, name: true, preferredLanguage: true },
     });
     if (user) {
       userId = user.id;
@@ -100,7 +102,7 @@ export async function processAppStoreServerNotification(record: AppStoreServerNo
   if (!cachedUserProfile) {
     cachedUserProfile = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, name: true },
+      select: { id: true, email: true, name: true, preferredLanguage: true },
     });
   }
 
@@ -137,12 +139,23 @@ export async function processAppStoreServerNotification(record: AppStoreServerNo
       autoRenewStatus,
     });
 
+    const winbackResult = await markSubscriptionCancellationForWinback({
+      userId,
+      email: cachedUserProfile?.email ?? null,
+      name: cachedUserProfile?.name ?? null,
+      preferredLanguage: cachedUserProfile?.preferredLanguage ?? null,
+      productId,
+    });
+
     logAppleSubscriptionEvent('app_store_notification_cancelled', {
       notificationId: record.id,
       userId,
       productId,
       reason,
       autoRenewStatus,
+      winbackMarked: winbackResult.marked,
+      winbackEmailSent: winbackResult.emailSent,
+      winbackEmailError: winbackResult.emailError,
     });
     return;
   }

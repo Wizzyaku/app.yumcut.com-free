@@ -16,6 +16,10 @@ model User {
   preferredLanguage         String                     @default("en") @db.VarChar(8)
   emailReplyBonusGrantedAt  DateTime?
   emailReplyBonusSourceId   String?                    @db.VarChar(191)
+  subscriptionWinbackBonusPending          Boolean     @default(false)
+  subscriptionWinbackBonusPendingAt        DateTime?
+  subscriptionWinbackBonusGrantedAt        DateTime?
+  subscriptionWinbackBonusGrantedSourceId  String?     @db.VarChar(191)
   createdAt                 DateTime                   @default(now())
   tokenBalance              Int                        @default(0)
   isAdmin                   Boolean                    @default(false)

@@ -7,6 +7,7 @@ import { getSubscriptionConfig } from '@/shared/constants/subscriptions';
 import { decodeSignedTransactionPayload } from './app-store/signed-data-verifier';
 import { logAppleSubscriptionEvent } from './app-store/subscription-logger';
 import { notifyAdminsOfSubscriptionPurchase } from './telegram';
+import { grantSubscriptionWinbackBonusOnResubscribe } from './subscription-winback';
 
 const APPLE_PRODUCTION_VERIFY_URL = 'https://buy.itunes.apple.com/verifyReceipt';
 const APPLE_SANDBOX_VERIFY_URL = 'https://sandbox.itunes.apple.com/verifyReceipt';
@@ -371,7 +372,7 @@ async function finalizePurchase(userId: string, descriptor: PurchaseDescriptor, 
     };
   }
 
-  const balance = await prisma.$transaction(async (tx) => {
+  const purchaseOutcome = await prisma.$transaction(async (tx) => {
     await tx.subscriptionPurchase.create({
       data: {
         userId,
@@ -399,7 +400,19 @@ async function finalizePurchase(userId: string, descriptor: PurchaseDescriptor, 
       tx,
     );
 
-    return newBalance;
+    const winbackBonus = await grantSubscriptionWinbackBonusOnResubscribe(
+      {
+        userId,
+        sourceTransactionId: descriptor.transactionId,
+        productId: descriptor.productId,
+      },
+      tx,
+    );
+
+    return {
+      balance: winbackBonus.granted ? (winbackBonus.balance ?? newBalance) : newBalance,
+      winbackBonusGranted: winbackBonus.tokensGranted,
+    };
   });
 
   const user = await prisma.user.findUnique({
@@ -407,10 +420,12 @@ async function finalizePurchase(userId: string, descriptor: PurchaseDescriptor, 
     select: { email: true, name: true },
   });
 
+  const totalTokensGranted = productConfig.tokens + purchaseOutcome.winbackBonusGranted;
+
   const result = {
     alreadyProcessed: false,
-    tokensGranted: productConfig.tokens,
-    balance,
+    tokensGranted: totalTokensGranted,
+    balance: purchaseOutcome.balance,
     productId: descriptor.productId,
     transactionId: descriptor.transactionId,
     expiresAt: descriptor.expiresDate?.toISOString() ?? null,
@@ -422,8 +437,10 @@ async function finalizePurchase(userId: string, descriptor: PurchaseDescriptor, 
     productId: descriptor.productId,
     transactionId: descriptor.transactionId,
     originalTransactionId: descriptor.originalTransactionId,
-    tokensGranted: productConfig.tokens,
-    balance,
+    tokensGranted: totalTokensGranted,
+    subscriptionTokensGranted: productConfig.tokens,
+    winbackBonusGranted: purchaseOutcome.winbackBonusGranted,
+    balance: purchaseOutcome.balance,
     environment: descriptor.environment,
     expiresAt: descriptor.expiresDate?.toISOString() ?? null,
   });
@@ -434,11 +451,11 @@ async function finalizePurchase(userId: string, descriptor: PurchaseDescriptor, 
     userName: user?.name ?? null,
     productId: descriptor.productId,
     productLabel: productConfig.label,
-    tokensGranted: productConfig.tokens,
+    tokensGranted: totalTokensGranted,
     transactionId: descriptor.transactionId,
     originalTransactionId: descriptor.originalTransactionId,
     environment: descriptor.environment,
-    balance,
+    balance: purchaseOutcome.balance,
     source,
   }).catch((err) => {
     // eslint-disable-next-line no-console

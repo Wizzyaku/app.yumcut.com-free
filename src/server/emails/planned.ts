@@ -9,6 +9,7 @@ import { TOKEN_COSTS } from '@/shared/constants/token-costs';
 export const EMAIL_KIND_WELCOME = 'welcome_v1';
 export const EMAIL_KIND_FOLLOW_UP_24H = 'follow_up_24h_v1';
 export const EMAIL_KIND_REPLY_BONUS_CONFIRMED = 'reply_bonus_confirmed_v1';
+export const EMAIL_KIND_SUBSCRIPTION_WINBACK = 'subscription_cancelled_winback_v1';
 
 const DEFAULT_EMAIL_LANGUAGE = 'en';
 const EMAIL_TEMPLATE_ROOT = path.join(process.cwd(), 'email');
