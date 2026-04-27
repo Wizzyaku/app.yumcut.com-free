@@ -98,8 +98,12 @@ describe('planned emails localization', () => {
   it('builds and verifies signed reply bonus aliases', () => {
     const userId = '11111111-1111-1111-1111-111111111111';
     const alias = buildReplyBonusReplyToAddress(userId);
-    expect(alias).toMatch(/^reply-bonus\+11111111-1111-1111-1111-111111111111\.[a-f0-9]{16}@app\.yumcut\.com$/);
+    expect(alias).toMatch(/^rb\+11111111-1111-1111-1111-111111111111\.[a-f0-9]{16}@app\.yumcut\.com$/);
+    const localPart = alias!.split('@')[0] ?? '';
+    expect(localPart.length).toBeLessThanOrEqual(64);
     expect(parseReplyBonusReplyToAddress([alias!])).toEqual({ userId });
+    const legacyAlias = alias!.replace(/^rb\+/, 'reply-bonus+');
+    expect(parseReplyBonusReplyToAddress([legacyAlias])).toEqual({ userId });
     expect(parseReplyBonusReplyToAddress(['reply-bonus+11111111-1111-1111-1111-111111111111.deadbeefdeadbeef@app.yumcut.com'])).toBeNull();
   });
 
@@ -132,7 +136,7 @@ describe('planned emails localization', () => {
       expect.objectContaining({
         subject: 'личное сообщение для Иван',
         text: expect.stringContaining('здравствуйте, Иван!'),
-        replyTo: [expect.stringMatching(/^reply-bonus\+user-1\.[a-f0-9]{16}@app\.yumcut\.com$/)],
+        replyTo: [expect.stringMatching(/^rb\+user-1\.[a-f0-9]{16}@app\.yumcut\.com$/)],
       }),
     );
 

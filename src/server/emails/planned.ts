@@ -13,7 +13,9 @@ export const EMAIL_KIND_REPLY_BONUS_CONFIRMED = 'reply_bonus_confirmed_v1';
 const DEFAULT_EMAIL_LANGUAGE = 'en';
 const EMAIL_TEMPLATE_ROOT = path.join(process.cwd(), 'email');
 const TEMPLATE_VARIABLE_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
-const REPLY_BONUS_ALIAS_PREFIX = 'reply-bonus';
+const REPLY_BONUS_ALIAS_PREFIX = 'rb';
+const LEGACY_REPLY_BONUS_ALIAS_PREFIX = 'reply-bonus';
+const REPLY_BONUS_SIGNATURE_LENGTH = 16;
 
 const MAX_ATTEMPTS = 8;
 const DEFAULT_PROCESS_LIMIT = 50;
@@ -209,7 +211,7 @@ export function buildReplyBonusReplyToAddress(userId: string): string | null {
     .createHmac('sha256', secret)
     .update(userId)
     .digest('hex')
-    .slice(0, 16);
+    .slice(0, REPLY_BONUS_SIGNATURE_LENGTH);
 
   return `${REPLY_BONUS_ALIAS_PREFIX}+${userId}.${signature}@${domain}`;
 }
@@ -223,7 +225,10 @@ export function parseReplyBonusReplyToAddress(addresses: string[]): { userId: st
     if (!normalized) continue;
 
     const localPart = normalized.split('@')[0] ?? '';
-    const match = localPart.match(/^reply-bonus\+([a-f0-9-]{36})\.([a-f0-9]{16})$/i);
+    const match = localPart.match(new RegExp(
+      `^(?:${REPLY_BONUS_ALIAS_PREFIX}|${LEGACY_REPLY_BONUS_ALIAS_PREFIX})\\+([a-f0-9-]{36})\\.([a-f0-9]{${REPLY_BONUS_SIGNATURE_LENGTH}})$`,
+      'i',
+    ));
     if (!match) continue;
 
     const userId = match[1];
@@ -232,7 +237,7 @@ export function parseReplyBonusReplyToAddress(addresses: string[]): { userId: st
       .createHmac('sha256', secret)
       .update(userId)
       .digest('hex')
-      .slice(0, 16)
+      .slice(0, REPLY_BONUS_SIGNATURE_LENGTH)
       .toLowerCase();
 
     if (signature === expectedSignature) {

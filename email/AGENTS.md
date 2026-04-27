@@ -26,3 +26,11 @@ These rules are mandatory for all email templates in `email/en` and `email/ru`.
 - Keep placeholder usage consistent (`{{name}}`, `{{bonus_tokens}}`, etc.).
 - Keep English and Russian versions aligned in intent.
 - Keep wording natural for each language, not literal machine translation.
+
+## Technical Delivery Guardrails
+
+- Do not change `Reply-To` addressing format without updating tests in `tests/server/planned-emails.test.ts`.
+- `Reply-To` must always be a valid email address in `email@example.com` format.
+- Keep the local part (before `@`) at 64 characters or less (RFC limit).
+- If aliasing is used in `Reply-To`, prefer short prefixes to avoid breaching local-part length.
+- Treat any provider error containing `Invalid \`reply_to\` field` as a release-blocking regression.
