@@ -1,8 +1,8 @@
-# {{name_prefix_comma}}your YumCut project is ready
+# {{name_prefix_comma}}Your YumCut project is ready
 
-hey {{name}},
+Hi {{name}},
 
-your YumCut project is ready.
+Your YumCut project is ready.
 Project: {{project_url}}
 Final video: {{final_video_url}}
 

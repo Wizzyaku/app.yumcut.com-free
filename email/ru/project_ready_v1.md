@@ -1,8 +1,8 @@
 # {{name_prefix_comma}}ваш проект в YumCut готов
 
-здравствуйте{{name_comma_suffix}}!
+Здравствуйте{{name_comma_suffix}}!
 
-ваш проект в YumCut готов.
+Ваш проект в YumCut готов.
 Проект: {{project_url}}
 Финальное видео: {{final_video_url}}
 
