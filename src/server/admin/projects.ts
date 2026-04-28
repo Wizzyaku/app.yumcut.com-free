@@ -5,6 +5,13 @@ import { getLatestErrorLog } from '@/server/projects/errors';
 import { normalizeLanguageList, DEFAULT_LANGUAGE } from '@/shared/constants/languages';
 import { sortAudioCandidatesByCreatedAtDesc } from '@/server/projects/helpers';
 import { normalizeLanguageVoiceMap } from '@/shared/voices/language-voice-map';
+import { calculateProjectTokenCost } from '@/shared/constants/token-costs';
+import {
+  PROJECT_ACTION_TOKEN_TYPES,
+  PROJECT_RELATED_TOKEN_TYPES,
+  extractProjectIdFromTokenMetadata,
+  toUsedTokensFromDelta,
+} from '@/server/admin/token-usage';
 
 export interface ListProjectsOptions {
   page?: number;
@@ -73,6 +80,7 @@ export interface AdminProjectDetailResult {
   };
   latestLogMessage: string | null;
   languageProgress: import('@/shared/types').ProjectLanguageProgressStateDTO[];
+  tokensUsed: number;
 }
 
 export async function getProjectDetailForAdmin(projectId: string): Promise<AdminProjectDetailResult | null> {
@@ -330,6 +338,39 @@ export async function getProjectDetailForAdmin(projectId: string): Promise<Admin
     failureReason: row.failureReason,
   }));
 
+  const projectRelatedTokenTransactions = await prisma.tokenTransaction.findMany({
+    where: {
+      userId: p.userId,
+      type: { in: [...PROJECT_RELATED_TOKEN_TYPES] },
+    },
+    select: {
+      type: true,
+      delta: true,
+      metadata: true,
+    },
+  });
+  const projectScopedRows = projectRelatedTokenTransactions.filter(
+    (tx) => extractProjectIdFromTokenMetadata(tx.metadata) === p.id,
+  );
+  const projectDeltaFromLedger = projectScopedRows.reduce((sum, tx) => sum + tx.delta, 0);
+  const hasExplicitProjectCreationCharge = projectScopedRows.some(
+    (tx) => tx.type === PROJECT_RELATED_TOKEN_TYPES[0],
+  );
+
+  const actionDeltaForProject = projectScopedRows.reduce((sum, tx) => {
+    if (![...PROJECT_ACTION_TOKEN_TYPES].includes(tx.type as any)) return sum;
+    return sum + tx.delta;
+  }, 0);
+  const actionTokensUsed = toUsedTokensFromDelta(actionDeltaForProject);
+  const estimatedCreationTokens = calculateProjectTokenCost(
+    typeof (initialJob?.payload as any)?.durationSeconds === 'number'
+      ? (initialJob?.payload as any).durationSeconds
+      : null,
+  ) * Math.max(languages.length, 1);
+  const tokensUsed = hasExplicitProjectCreationCharge
+    ? toUsedTokensFromDelta(projectDeltaFromLedger)
+    : Math.max(0, estimatedCreationTokens + actionTokensUsed);
+
   return {
     project: {
       id: p.id,
@@ -359,5 +400,6 @@ export async function getProjectDetailForAdmin(projectId: string): Promise<Admin
       ? ((await getLatestErrorLog(prisma, p.id))?.message || latestLog?.message)
       : latestLog?.message) || null,
     languageProgress,
+    tokensUsed,
   };
 }

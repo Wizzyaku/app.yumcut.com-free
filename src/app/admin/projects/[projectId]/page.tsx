@@ -25,7 +25,7 @@ export default async function AdminProjectDetailPage({ params }: { params: Promi
     notFound();
   }
 
-  const { project, user, latestLogMessage, languageProgress } = detail;
+  const { project, user, latestLogMessage, languageProgress, tokensUsed } = detail;
   const statusInfo = project.statusInfo as Record<string, unknown> | undefined;
   const statusLabel = formatStatus(project.status);
   const statusDescription = describeStatus(project.status);
@@ -83,6 +83,9 @@ export default async function AdminProjectDetailPage({ params }: { params: Promi
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="info">{statusLabel}</Badge>
+          <Badge className="border border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+            Used {tokensUsed.toLocaleString()} tokens
+          </Badge>
           <Link
             href={`/admin/users/${user.id}`}
             className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"

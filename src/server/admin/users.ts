@@ -1,5 +1,6 @@
 import { prisma } from '@/server/db';
 import { ProjectStatus } from '@/shared/constants/status';
+import { PROJECT_RELATED_TOKEN_TYPES, toUsedTokensFromDelta } from '@/server/admin/token-usage';
 
 type PaginationInput = {
   page?: number;
@@ -162,6 +163,7 @@ export interface AdminUserDetailResult {
       linkedAt: string;
     } | null;
   };
+  projectTokensUsed: number;
   tokenHistory: {
     items: Array<{
       id: string;
@@ -234,7 +236,7 @@ export async function getUserDetail(userId: string, options: AdminUserDetailOpti
   const projectPage = normalizePage(options.projectPage);
   const projectSkip = (projectPage - 1) * projectTake;
 
-  const [txItems, txTotal, projectItems, projectTotal] = await prisma.$transaction([
+  const [txItems, txTotal, projectItems, projectTotal, projectTokenDelta] = await prisma.$transaction([
     prisma.tokenTransaction.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -263,6 +265,13 @@ export async function getUserDetail(userId: string, options: AdminUserDetailOpti
       },
     }),
     prisma.project.count({ where: { userId, deleted: false } }),
+    prisma.tokenTransaction.aggregate({
+      where: {
+        userId,
+        type: { in: [...PROJECT_RELATED_TOKEN_TYPES] },
+      },
+      _sum: { delta: true },
+    }),
   ]);
 
   return {
@@ -285,6 +294,7 @@ export async function getUserDetail(userId: string, options: AdminUserDetailOpti
           }
         : null,
     },
+    projectTokensUsed: toUsedTokensFromDelta(projectTokenDelta._sum.delta),
     tokenHistory: {
       items: txItems.map((tx) => ({
         ...tx,

@@ -62,6 +62,9 @@ export default async function AdminUserDetailPage(props: {
           <p className="text-sm text-gray-500 dark:text-gray-300">Joined {formatDateTimeAdminLong(user.createdAt)}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Badge className="border border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+            Project usage {detail.projectTokensUsed.toLocaleString()} tokens
+          </Badge>
           {user.isAdmin ? <Badge variant="danger">Administrator</Badge> : null}
           <Badge className="border border-gray-300 bg-transparent text-gray-600 dark:border-gray-700 dark:text-gray-300">User ID {user.id}</Badge>
         </div>

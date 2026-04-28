@@ -196,15 +196,6 @@ export const POST = withApiError(async function POST(req: NextRequest) {
   const tokenCost = baseTokenCost * Math.max(languagesList.length, 1);
 
   const project = await prisma.$transaction(async (tx) => {
-    await spendTokens({
-      userId,
-      amount: tokenCost,
-      type: TOKEN_TRANSACTION_TYPES.projectCreation,
-      description: `Project creation (${effectiveSeconds}s)` ,
-      initiator: makeUserInitiator(userId),
-      metadata: { durationSeconds: effectiveSeconds, languageCount: languagesList.length },
-    }, tx);
-
     const created = await tx.project.create({
       data: {
         user: { connect: { id: userId } },
@@ -218,6 +209,19 @@ export const POST = withApiError(async function POST(req: NextRequest) {
         status: ProjectStatus.New,
       },
     });
+
+    await spendTokens({
+      userId,
+      amount: tokenCost,
+      type: TOKEN_TRANSACTION_TYPES.projectCreation,
+      description: `Project creation (${effectiveSeconds}s)`,
+      initiator: makeUserInitiator(userId),
+      metadata: {
+        projectId: created.id,
+        durationSeconds: effectiveSeconds,
+        languageCount: languagesList.length,
+      },
+    }, tx);
 
     await Promise.all(
       languagesList.map((languageCode) =>

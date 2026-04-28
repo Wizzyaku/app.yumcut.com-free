@@ -8,6 +8,7 @@ export const TOKEN_TRANSACTION_TYPES = {
   audioRegeneration: 'AUDIO_REGENERATION',
   imageRegeneration: 'IMAGE_REGENERATION',
   imageRegenerationRefund: 'IMAGE_REGENERATION_REFUND',
+  projectFailureRefund: 'PROJECT_FAILURE_REFUND',
   characterImage: 'CHARACTER_IMAGE',
   subscriptionCredit: 'SUBSCRIPTION_CREDIT',
 } as const;
